@@ -1,0 +1,8 @@
+//
+// Created by stas on 21.04.20.
+//
+
+#ifndef DICOMANONYMIZER_UTILS_H
+#define DICOMANONYMIZER_UTILS_H
+
+#endif //DICOMANONYMIZER_UTILS_H
