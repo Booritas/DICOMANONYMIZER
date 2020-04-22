@@ -19,3 +19,6 @@ Distribution files are copied in dist subfolder of the repository root directory
 - Repository Parsing DICOM using WebAssembly (https://github.com/jodogne/wasm-dicom-parser)
 - Emscripten framework
 - cmake
+## Live Demo
+
+http://slideio.com/dicom/
