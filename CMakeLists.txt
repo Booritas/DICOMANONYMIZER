@@ -1,19 +1,36 @@
 cmake_minimum_required(VERSION 3.12)
 project(DICOMAnonymizer)
 
-set(WASM_FLAGS "-s WASM=1")
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WASM_FLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WASM_FLAGS}")
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ALLOW_MEMORY_GROWTH=1 -s EXTRA_EXPORTED_RUNTIME_METHODS=['ccall','UTF8ToString']  --js-library ${CMAKE_SOURCE_DIR}/library.js")
+set(WA_BUILD ON)
+string(FIND "${CMAKE_TOOLCHAIN_FILE}" "Emscripten" EMPOS)
+if (${EMPOS} LESS 0)
+  message("C++ native compilation")
+  set(WA_BUILD OFF)
+else()
+  message("WebAssembly compilation")
+endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-deprecated-register")
+
+if (WA_BUILD)
+  set(WASM_FLAGS "-s WASM=1")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${WASM_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${WASM_FLAGS}")
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s ALLOW_MEMORY_GROWTH=1 -s EXTRA_EXPORTED_RUNTIME_METHODS=['ccall','UTF8ToString']  --js-library ${CMAKE_SOURCE_DIR}/library.js")
+  set(CONFIG_DIR ${CMAKE_SOURCE_DIR}/config_wa)
+else()
+  set(CONFIG_DIR ${CMAKE_SOURCE_DIR}/config_cpp)
+endif()
+
 set(DCMTK_SOURCES_DIR "dcmtk-3.6.0")
 
 add_definitions(
   -DHAVE_CONFIG_H=1
-  -DLOG4CPLUS_DISABLE_FATAL=1    # Disable the log4cplus support
+  -DLOG4CPLUS_DISABLE_FATAL=1         # Disable the log4cplus support
   )
 
 include_directories(
-  ${CMAKE_SOURCE_DIR}/extra             # To include the "dcmtk" folder
+  ${CONFIG_DIR}                       # To include the "dcmtk" folder
   ${DCMTK_SOURCES_DIR}/oflog/include
   ${DCMTK_SOURCES_DIR}/ofstd/include
   ${DCMTK_SOURCES_DIR}/dcmdata/include
@@ -113,45 +130,113 @@ set(DCMTK_SOURCES_DCMDATA
   ${DCMTK_SOURCES_DIR}/dcmdata/libsrc/dcvrut.cc
   ${DCMTK_SOURCES_DIR}/dcmdata/libsrc/dcwcache.cc
   ${DCMTK_SOURCES_DIR}/dcmdata/libsrc/dcxfer.cc
-  #${DCMTK_SOURCES_DIR}/dcmdata/libsrc/mkdeftag.cc
-  #${DCMTK_SOURCES_DIR}/dcmdata/libsrc/mkdictbi.cc
+#  ${DCMTK_SOURCES_DIR}/dcmdata/libsrc/mkdeftag.cc
+#  ${DCMTK_SOURCES_DIR}/dcmdata/libsrc/mkdictbi.cc
   ${DCMTK_SOURCES_DIR}/dcmdata/libsrc/vrscan.cc
-
-  ${CMAKE_SOURCE_DIR}/extra/dcmtk/vrscanl.c
+  ${CONFIG_DIR}/dcmtk/vrscanl.c
   )
 
-add_library(dcmtk
-  ${DCMTK_SOURCES_OFSTD}
-  ${DCMTK_SOURCES_DCMDATA}
-  )
+if(WIN32 AND NOT CYGWIN)
+  set(OFLOG_PLATFORM_LIBRARIES
+      ${DCMTK_SOURCES_DIR}/oflog/libsrc/winsock.cc
+      ${DCMTK_SOURCES_DIR}/oflog/libsrc/windebap.cc
+      ${DCMTK_SOURCES_DIR}/oflog/libsrc/winconap.cc
+      )
+else(WIN32 AND NOT CYGWIN)
+  set(OFLOG_PLATFORM_LIBRARIES
+      ${DCMTK_SOURCES_DIR}/oflog/libsrc/unixsock
+      )
+endif(WIN32 AND NOT CYGWIN)
 
+set(DCMTK_SOURCES_OFFLOG
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/apndimpl.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/appender.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/config.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/consap.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/factory.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/fileap.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/filter.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/globinit.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/hierarchy.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/hierlock.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/layout.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/lloguser.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/logevent.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/logger.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/logimpl.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/loglevel.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/loglog.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/ndc.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/ntelogap.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/nullap.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/objreg.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/oflog.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/patlay.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/pointer.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/property.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/rootlog.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/sleep.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/sockbuff.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/socketap.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/socket.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/strhelp.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/syncprims.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/syslogap.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/threads.cc
+    ${DCMTK_SOURCES_DIR}/oflog/libsrc/timehelp.cc
+    )
+
+if (WA_BUILD)
+  add_library(dcmtk
+      ${DCMTK_SOURCES_OFSTD}
+      ${DCMTK_SOURCES_DCMDATA}
+      )
+else()
+  add_library(dcmtk
+      ${DCMTK_SOURCES_OFSTD}
+      ${DCMTK_SOURCES_DCMDATA}
+      ${DCMTK_SOURCES_OFFLOG}
+      ${OFLOG_PLATFORM_LIBRARIES}
+    )
+endif()
 
 set(SOURCE 
     anonymize.cpp
     stripDataset.cpp
     stripDataset.h
+    utils.h
+    utils.cpp
     )
 
-# Regenerate a dummy "library.c" file each time the "library.js" file
-# is modified, so as to force a new execution of the linking
-add_custom_command(
-    OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/library.c"
-    COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_BINARY_DIR}/library.c" ""
-    DEPENDS "${CMAKE_SOURCE_DIR}/library.js")
+if (WA_BUILD)
+  # WebAssembly target build
+  # Regenerate a dummy "library.c" file each time the "library.js" file
+  # is modified, so as to force a new execution of the linking
+  add_custom_command(
+      OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/library.c"
+      COMMAND ${CMAKE_COMMAND} -E touch "${CMAKE_CURRENT_BINARY_DIR}/library.c" ""
+      DEPENDS "${CMAKE_SOURCE_DIR}/library.js")
 
-add_executable(${PROJECT_NAME} ${SOURCE} ${CMAKE_CURRENT_BINARY_DIR}/library.c)
+  add_executable(${PROJECT_NAME} ${SOURCE} ${CMAKE_CURRENT_BINARY_DIR}/library.c)
 
-target_link_libraries(${PROJECT_NAME} dcmtk)
+  target_link_libraries(${PROJECT_NAME} dcmtk)
 
-install(TARGETS ${PROJECT_NAME}
-  DESTINATION ${CMAKE_SOURCE_DIR}/dist
-  )
+  install(TARGETS ${PROJECT_NAME}
+    DESTINATION ${CMAKE_SOURCE_DIR}/dist
+    )
 
-install(FILES
-  ${CMAKE_SOURCE_DIR}/index.html
-  ${CMAKE_SOURCE_DIR}/wrap.js
-  ${CMAKE_SOURCE_DIR}/library.js
-  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.wasm
-  ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.js
-  DESTINATION ${CMAKE_SOURCE_DIR}/dist
-  )
+  install(FILES
+    ${CMAKE_SOURCE_DIR}/index.html
+    ${CMAKE_SOURCE_DIR}/style.css
+    ${CMAKE_SOURCE_DIR}/wrap.js
+    ${CMAKE_SOURCE_DIR}/library.js
+    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.wasm
+    ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.js
+    DESTINATION ${CMAKE_SOURCE_DIR}/dist
+    )
+else()
+  # c++ native target build
+  add_library(cpplib ${SOURCE})
+  add_executable(${PROJECT_NAME} main.cpp)
+  target_link_libraries(${PROJECT_NAME} cpplib dcmtk)
+endif()

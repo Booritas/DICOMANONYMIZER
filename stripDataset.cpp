@@ -145,7 +145,7 @@ static const std::unordered_set<DcmTagKey, dcmtagkey_hash> confidentialTags =
     DCM_ParticipantSequence,
     DCM_PatientAddress,
     DCM_PatientComments,
-    DCM_PatientID,
+//    DCM_PatientID,
     DCM_PatientSexNeutered,
     DCM_PatientState,
     DCM_PatientTransportArrangements,
@@ -249,12 +249,12 @@ static const std::unordered_set<DcmTagKey, dcmtagkey_hash> confidentialTags =
     DCM_RETIRED_ScheduledStudyLocationAETitle,
     DCM_SeriesDate,
     DCM_SeriesDescription,
-    DCM_SeriesInstanceUID,
+//    DCM_SeriesInstanceUID,
     DCM_SeriesTime,
     DCM_ServiceEpisodeDescription,
     DCM_ServiceEpisodeID,
     DCM_SmokingStatus,
-    DCM_SOPInstanceUID,
+//    DCM_SOPInstanceUID,
     DCM_SourceImageSequence,
     DCM_SourceSerialNumber,
     DCM_SpecialNeeds,
@@ -266,7 +266,7 @@ static const std::unordered_set<DcmTagKey, dcmtagkey_hash> confidentialTags =
     DCM_StudyDescription,
     DCM_StudyID,
     DCM_RETIRED_StudyIDIssuer,
-    DCM_StudyInstanceUID,
+//    DCM_StudyInstanceUID,
     DCM_StudyTime,
     DCM_SynchronizationFrameOfReferenceUID,
     DcmTagKey(0x18,0x2042), //DCM_TargetUID,
@@ -342,13 +342,13 @@ static void stripPrivateTags(DcmItem* item)
     for(const auto& key : keysToDelete)
     {
         OFCondition result = item->findAndDeleteElement(key, true, true);
-        if(result.good())
-        {
-            std::cout << "Tag ("
-                << std::hex << key.getGroup()
-                << "," << std::hex << key.getElement()
-                << ") is removed" << std::endl;
-        }
+        // if(result.good())
+        // {
+        //     std::cout << "Tag ("
+        //         << std::hex << key.getGroup()
+        //         << "," << std::hex << key.getElement()
+        //         << ") is removed" << std::endl;
+        // }
     }    
 
 }

@@ -1,36 +1,13 @@
+#if defined(__EMSCRIPTEN__)
 #include <emscripten/emscripten.h>
 #include <iostream>
+#include <vector>
 #include "stripDataset.h"
-
+#include "utils.h"
+#include <dcmtk/dcmdata/dcostrmb.h>
 
 extern "C" void AddTag(bool isHeader, const char* tag, bool red);
 
-// Use DCMTK to parse a memory buffer containing a DICOM file. This
-// code comes from Orthanc.
-static std::shared_ptr<DcmFileFormat> LoadFromMemoryBuffer(const void* buffer,
-                                           size_t size)
-{
-    DcmInputBufferStream is;
-    if (size > 0)
-    {
-        is.setBuffer(buffer, size);
-    }
-    is.setEos();
-
-    std::shared_ptr<DcmFileFormat> result(new DcmFileFormat);
-
-    result->transferInit();
-    if (!result->read(is).good())
-    {
-        result.reset();
-    }
-    else
-    {
-        result->loadAllDataIntoMemory();
-        result->transferEnd();
-    }
-    return result;
-}
 
 // Loop over the tags contained in a DICOM dataset, convert them as
 // strings, and fill the HTML page with these strings.
@@ -80,20 +57,41 @@ static void printTags(std::shared_ptr<DcmFileFormat> dicom, bool left)
 }
 
 // Performes anonimyzation of a DICOM file
-extern "C" bool EMSCRIPTEN_KEEPALIVE anonymizeFile(const void* data, size_t length)
+extern "C" size_t EMSCRIPTEN_KEEPALIVE anonymizeFile(
+    const void* inputData, size_t inputLength,
+    void* outputData, size_t outputLength)
 {
-    bool ok = false;
-    std::cout << "---------anonymizeFile Begin" << std::endl;
-    if(data && length)
+    size_t written = 0;
+    std::cout << "---------anonymizeFile Begin. Received bytes: " << inputLength << std::endl;
+    std::cout << "Output buffer size: " << outputLength << std::endl;
+    if(inputData && inputLength)
     {
-        std::shared_ptr<DcmFileFormat> dicom(LoadFromMemoryBuffer(data, length));
+        std::shared_ptr<DcmFileFormat> dicom(loadFromMemoryBuffer(inputData, inputLength));
         if(dicom)
         {
             std::cout << "DICOM file successfuly loaded" << std::endl;
             printTags(dicom, true);
-            stripPrivateTags(dicom);
+            //stripPrivateTags(dicom);
             printTags(dicom, false);
-            ok = true;
+            DcmOutputBufferStream out(outputData, outputLength);
+            dicom->transferInit();
+            OFCondition res = dicom->write(out, EXS_Unknown, EET_UndefinedLength, nullptr,
+                EGL_recalcGL);
+            dicom->transferEnd();
+            if(res.good())
+            {
+                void *bf(nullptr);
+                offile_off_t used(0);
+                out.flushBuffer(bf,used);
+                written = used;
+                std::cout << "Dataset is successfuly written. Number of bytes:" << written << std::endl;
+            }
+            else 
+            {
+                std::cout << "Failed to save dataset" << std::endl;
+                std::cout << "Error code:" << res.code() << ". Message: " << res.text() << std::endl;
+            }
+
         }
         else
         {
@@ -105,5 +103,6 @@ extern "C" bool EMSCRIPTEN_KEEPALIVE anonymizeFile(const void* data, size_t leng
         std::cout << "Invalid data received" << std::endl;
     }
     std::cout << "---------anonymizeFile End" << std::endl;
-    return ok;
+    return written;
 }
+#endif

@@ -101,7 +101,7 @@
 #include "dcmtk/ofstd/ofstd.h"
 #include "dcmtk/ofstd/ofcond.h"
 #include "dcmtk/ofstd/ofstream.h"
-
+//#include <math.h>
 #define INCLUDE_CMATH
 #define INCLUDE_CFLOAT
 #define INCLUDE_CSTRING

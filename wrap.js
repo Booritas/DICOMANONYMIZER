@@ -17,40 +17,52 @@ var ENTITY_MAP = {
   }
   
 
-function anonymizeFile(dicom)
+function anonymizeFile(input, output)
 {
     const done = Module.ccall(
         'anonymizeFile',    // Name of the C++ function
         'number',           // Return value (a Boolean indicating success)
         [                   // The list of arguments
             'array',    
+            'number',
+            'array',
             'number'
         ],
         [                   // The value of the arguments
-            new Uint8Array(dicom),
-            dicom.byteLength
+            input,
+            input.byteLength,
+            output,
+            output.byteLength 
         ]
     );
     return done;
 }
-
-function parseFile(dicom)
+function updateProtocol(text)
 {
-    const done = Module.ccall(
-        'parseFile',    // Name of the C++ function
-        'number',           // Return value (a Boolean indicating success)
-        [                   // The list of arguments
-            'array',    
-            'number'
-        ],
-        [                   // The value of the arguments
-            new Uint8Array(dicom),
-            dicom.byteLength
-        ]
-    );
-    return done;
+   document.getElementById("protocol").innerHTML += text + "<br/>";
 }
 
+function updateRequestResult(text)
+{
+    document.getElementById("response").innerHTML = text;
+}
+
+function sendData(dicomData)
+{
+    var url = "http://localhost/orthanc/instances";
+    updateProtocol("Sending data. Data size:" + dicomData.byteLength);
+    var oReq = new XMLHttpRequest();
+    oReq.withCredentials = true;
+    oReq.open("POST", url, false, "orthanc", "orthanc");
+    oReq.onload = function(e){
+        console.log(oReq.response)
+        updateProtocol("Response code:" + oReq.status);
+        updateRequestResult(oReq.response);
+    }
+    oReq.send(dicomData);
+    updateProtocol("Data is sent");
+
+}
 // This event is triggered when the user uploads a DICOM file
 document.getElementById('upload').addEventListener('submit', function(e) 
 {
@@ -64,11 +76,21 @@ document.getElementById('upload').addEventListener('submit', function(e)
         reader.onload = function(event) 
         {
             var dicom = this.result;
-            // Call the C++ function "ParseDicom()"
-            if (!anonymizeFile(dicom))
+            var input = new Uint8Array(dicom);
+            var outputBuffer = new ArrayBuffer(dicom.byteLength*2)
+            var output = new Uint8Array(outputBuffer);
+                    // Call the C++ function "ParseDicom()"
+            var newLen = anonymizeFile(input, output);
+            if (newLen<=0)
             {
                 // The C++ function has failed (it has returned "false")
                 alert('Sorry, unable to parse to DICOM file');
+            }
+            else
+            {
+                console.log("Received " + newLen + " bytes");
+                //sendData(output.slice(0,newLen));
+                sendData(input);
             }
         };
         // Instruct JavaScript to load the file as an ArrayBuffer

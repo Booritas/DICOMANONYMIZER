@@ -95,7 +95,10 @@ OFCondition DcmUnsignedLong::checkValue(const OFString &vm,
 
 unsigned long DcmUnsignedLong::getVM()
 {
-    return getLengthField() / sizeof(Uint32);
+    auto len = getLengthField();
+    auto sz = sizeof(Uint32);
+    unsigned long val = len/sz;
+    return  val;
 }
 
 
