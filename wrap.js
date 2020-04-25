@@ -17,7 +17,7 @@ var ENTITY_MAP = {
   }
   
 
-function anonymizeFile(input, output)
+function anonymizeFile(input, output, bufferLen)
 {
     const done = Module.ccall(
         'anonymizeFile',    // Name of the C++ function
@@ -25,14 +25,14 @@ function anonymizeFile(input, output)
         [                   // The list of arguments
             'array',    
             'number',
-            'array',
+            'number',
             'number'
         ],
         [                   // The value of the arguments
             input,
             input.byteLength,
             output,
-            output.byteLength 
+            bufferLen 
         ]
     );
     return done;
@@ -76,22 +76,24 @@ document.getElementById('upload').addEventListener('submit', function(e)
         reader.onload = function(event) 
         {
             var dicom = this.result;
+            console.log("Received " + dicom.byteLength + " bytes.")
             var input = new Uint8Array(dicom);
-            var outputBuffer = new ArrayBuffer(dicom.byteLength*2)
-            var output = new Uint8Array(outputBuffer);
-                    // Call the C++ function "ParseDicom()"
-            var newLen = anonymizeFile(input, output);
+            const bytesPerElement = Module.HEAPU8.BYTES_PER_ELEMENT;
+            const newBufferLen = dicom.byteLength*2;
+            var outputBuffer = Module._malloc(newBufferLen*bytesPerElement);
+            //Module.HEAPU8.set(output, outputBuffer/bytesPerElement);
+            var newLen = anonymizeFile(input, outputBuffer, newBufferLen);
             if (newLen<=0)
             {
-                // The C++ function has failed (it has returned "false")
-                alert('Sorry, unable to parse to DICOM file');
+                alert('Sorry, unable to process the DICOM file');
             }
             else
             {
-                console.log("Received " + newLen + " bytes");
-                //sendData(output.slice(0,newLen));
-                sendData(input);
+                var output = new Uint8Array(Module.HEAPU8.buffer, outputBuffer, newLen);
+                console.log("Sending " + newLen + " bytes");
+                sendData(output);
             }
+            Module._free(outputBuffer);
         };
         // Instruct JavaScript to load the file as an ArrayBuffer
         reader.readAsArrayBuffer(fileInput.files[0]);

@@ -61,6 +61,9 @@ extern "C" size_t EMSCRIPTEN_KEEPALIVE anonymizeFile(
     const void* inputData, size_t inputLength,
     void* outputData, size_t outputLength)
 {
+    // std::cout << "Copy " << inputLength << " bytest to the output buffer" << std::endl;
+    // std::memcpy(outputData, inputData, inputLength);
+    // return inputLength;
     size_t written = 0;
     std::cout << "---------anonymizeFile Begin. Received bytes: " << inputLength << std::endl;
     std::cout << "Output buffer size: " << outputLength << std::endl;
@@ -71,23 +74,12 @@ extern "C" size_t EMSCRIPTEN_KEEPALIVE anonymizeFile(
         {
             std::cout << "DICOM file successfuly loaded" << std::endl;
             printTags(dicom, true);
-            //stripPrivateTags(dicom);
+            stripPrivateTags(dicom);
             printTags(dicom, false);
-            DcmOutputBufferStream out(outputData, outputLength);
-            dicom->transferInit();
-            OFCondition res = dicom->write(out, EXS_Unknown, EET_UndefinedLength, nullptr,
-                EGL_recalcGL);
-            dicom->transferEnd();
-            if(res.good())
+            OFCondition res = saveToMemoryBuffer(dicom, outputData, outputLength, written);
+            if(res.bad())
             {
-                void *bf(nullptr);
-                offile_off_t used(0);
-                out.flushBuffer(bf,used);
-                written = used;
-                std::cout << "Dataset is successfuly written. Number of bytes:" << written << std::endl;
-            }
-            else 
-            {
+                written = 0;
                 std::cout << "Failed to save dataset" << std::endl;
                 std::cout << "Error code:" << res.code() << ". Message: " << res.text() << std::endl;
             }
