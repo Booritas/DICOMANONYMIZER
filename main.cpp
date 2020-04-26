@@ -22,11 +22,12 @@ void loadFormMemory(const std::string& inputPath, const std::string& outputPath)
     inData.resize(fileSize);
     inputFile.read((char*)inData.data(),inData.size());
     size_t read = inputFile.gcount();
-    std::shared_ptr<DcmFileFormat> dicom = loadFromMemoryBuffer(inData.data(), inData.size());
-    stripPrivateTags(dicom);
+    std::shared_ptr<DcmFileFormat> dicom;
+    OFCondition res = loadFromMemoryBuffer(inData.data(), inData.size(), dicom);
+    stripPrivateTags(dicom, 2);
     std::vector<uint8_t> outData(inData.size()*2);
     size_t written = 0;
-    OFCondition res = saveToMemoryBuffer(dicom, outData.data(), outData.size(), written);
+    res = saveToMemoryBuffer(dicom, outData.data(), outData.size(), written);
     std::ofstream outputFile(outputPath, std::ofstream::binary);
     outputFile.write((char*)outData.data(), written);
 

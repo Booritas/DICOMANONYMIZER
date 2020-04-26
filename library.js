@@ -21,26 +21,50 @@
 // This is the library of the "extern" JavaScript functions that can
 // be called from the C++ code
 
-mergeInto(LibraryManager.library, {
-
+mergeInto(LibraryManager.library, 
+{
   // The "AddTag()" function append one line to the "Headers" or
   // "Tags" section of the HTML page
-  AddTag: function(isHeader, s, red) {
-    
-    // Convert the C string "const char*" to a JavaScript string, and
-    // escape it to avoid HTML entities
-    var pref = "<div>"
-    var suf = "</div>"
-    if(red)
-    {
-      pref = "<div style=\"color:red\">"
-    }
-    var content = pref + EscapeHtml(UTF8ToString(s)) + suf;
-
-    // Select the target HTML element
-    var target = isHeader ? 'headers' : 'tags';
-
-    document.getElementById(target).innerHTML += content;
-  }
-  
+  addTagJS: function(parentHtmlTagNameUTF8, s, confidential) 
+  {  
+      // Convert the C string "const char*" to a JavaScript string, and
+      // escape it to avoid HTML entities
+      var pref = "<div>"
+      var suf = "</div>"
+      if(confidential)
+      {
+        pref = "<div style=\"color:red\">"
+      }
+      const content = pref + EscapeHtml(UTF8ToString(s)) + suf;
+      const parentHtmlTagName = UTF8ToString(parentHtmlTagNameUTF8);
+      const parentHtmlTag = document.getElementById(parentHtmlTagName);
+      if(parentHtmlTag==null)
+      { 
+        console.error("Cannot find HTML tag " + parentHtmlTagName + " to output information");
+      }
+      else
+      {
+        parentHtmlTag.innerHTML += content;
+      }
+  },
+  // display error message on the WEB page
+  // Each error message is added as a separated
+  // div element to the "errors" HTML element
+  showErrorMessageJS: function(errorMessageUTF8) 
+  {  
+      // Convert the C string "const char*" to a JavaScript string, and
+      var pref = "<div>"
+      var suf = "</div>"
+      const errorMessage = pref + EscapeHtml(UTF8ToString(errorMessageUTF8)) + suf;
+      const parentHtmlTagName = "errors";
+      const parentHtmlTag = document.getElementById(parentHtmlTagName);
+      if(parentHtmlTag==null)
+      { s
+        console.error(errorMessage);
+      }
+      else
+      {
+        parentHtmlTag.innerHTML += errorMessage;
+      }
+  }  
 });

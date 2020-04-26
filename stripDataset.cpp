@@ -1,4 +1,5 @@
 #include "stripDataset.h"
+#include "utils.h"
 #include <dcmtk/dcmdata/dcelem.h>
 #include <dcmtk/dcmdata/dcdeftag.h>
 #include <iostream>
@@ -322,8 +323,21 @@ bool isConfidential(const DcmTagKey& key)
     return confidential;
 }
 
-static void stripPrivateTags(DcmItem* item)
+// Remove all confidential DICOM tags from a dcmtk item 
+static OFCondition stripPrivateTags(
+    DcmItem* item,   // item to be processed
+    int tracingLevel // tracing level: 0,1 or 2 
+    )
 {
+    if(!item)
+    {
+        return dcmtkError("Invalid DICOM item.");
+    }
+
+    if(tracingLevel>0)
+    {
+        std::cout << "Begin of removing DICOM tags" << std::endl;
+    }
     // collect tag keys for deletion
     std::list<DcmTagKey> keysToDelete;
     for (unsigned long i = 0; i < item->card(); i++)
@@ -338,26 +352,76 @@ static void stripPrivateTags(DcmItem* item)
             }
         }
     }
+    if(tracingLevel>0)
+    {
+        std::cout << "Number of tags to be deleted:" << keysToDelete.size() << std::endl;
+    }
     // delete collected keys
+    int countDeleted(0);
     for(const auto& key : keysToDelete)
     {
         OFCondition result = item->findAndDeleteElement(key, true, true);
-        // if(result.good())
-        // {
-        //     std::cout << "Tag ("
-        //         << std::hex << key.getGroup()
-        //         << "," << std::hex << key.getElement()
-        //         << ") is removed" << std::endl;
-        // }
+        if(result.good())
+        {
+            countDeleted++;
+            if(tracingLevel>1)
+            {
+                std::cout << "Successfuly deleted tag (" 
+                    << std::hex 
+                    << key.getGroup() 
+                    <<  "," 
+                    << key.getElement() 
+                    << ")" 
+                    << std::endl;
+            }
+        }
+        else
+        {
+            std::cout << "Error by deletion of the tag (" 
+                << std::hex 
+                << key.getGroup() 
+                <<  "," 
+                << key.getElement() 
+                << ")" 
+                << std::endl;
+            std::cout << result.text() << std::endl;
+        }
     }    
 
+    if(tracingLevel>0)
+    {
+        std::cout << "Number of deleted DICOM tags:" 
+            << std::dec 
+            << countDeleted
+            << std::endl;
+        std::cout << "End of removing DICOM tags" << std::endl;
+    }
+    OFCondition res;
+    return res;
 }
 
 // Strips all confidential tags from a DICOM file
-void stripPrivateTags(std::shared_ptr<DcmFileFormat> file)
+OFCondition stripPrivateTags(
+    std::shared_ptr<DcmFileFormat> file, // dcmtk instance of DICOM file
+    int tracingLevel                     // tracing level (0, 1, 2)
+    )
 {
+    // Strip dataset
     DcmDataset* dataset = file->getDataset();
-    stripPrivateTags(dataset);
+    if(!dataset)
+    {
+        return dcmtkError("Invalid DICOM dataset");
+    }
+    OFCondition res1 = stripPrivateTags(dataset, tracingLevel);
+    if(res1.good())
+    {
+        return res1;
+    }
+    // strip file metainfo
     DcmMetaInfo* metainfo = file->getMetaInfo();
-    stripPrivateTags(metainfo);
+    if(!metainfo)
+    {
+        return dcmtkError("Invalid DICOM meta info item");
+    }
+    return stripPrivateTags(metainfo, tracingLevel);
 }

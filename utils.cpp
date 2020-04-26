@@ -3,42 +3,55 @@
 //
 #include "utils.h"
 #include <dcmtk/dcmdata/dcostrmb.h>
+#include <dcmtk/dcmdata/dcwcache.h>
 
 
 // Use DCMTK to parse a memory buffer containing a DICOM file. This
 // code comes from Orthanc.
-std::shared_ptr<DcmFileFormat> loadFromMemoryBuffer(const void* buffer, size_t size)
+OFCondition loadFromMemoryBuffer(
+    const void* buffer,                     // buffer wiht DICOM data
+    size_t size,                            // size of the buffer
+    std::shared_ptr<DcmFileFormat>& dicom   // output instance of dcmtk file
+    )
 {
-    DcmInputBufferStream is;
-    if (size > 0)
+    if(!buffer || size<=0)
     {
-        is.setBuffer(buffer, size);
+        return dcmtkError("Invalid input buffer");
     }
+
+    DcmInputBufferStream is;
+    is.setBuffer(buffer, size);
     is.setEos();
 
-    std::shared_ptr<DcmFileFormat> dicom(new DcmFileFormat);
-
+    dicom.reset(new DcmFileFormat);
     dicom->transferInit();
     OFCondition result = dicom->read(is);
-    if (!result.good())
+
+    if (result.good())
+    {
+        result = dicom->loadAllDataIntoMemory();
+        dicom->transferEnd();
+    }
+    if(result.bad())
     {
         dicom.reset();
     }
-    else
-    {
-        dicom->loadAllDataIntoMemory();
-        dicom->transferEnd();
-    }
-    return dicom;
+    return result;
 }
-
-OFCondition saveToMemoryBuffer(std::shared_ptr<DcmFileFormat> dicom, void* buffer, size_t size, size_t& written)
+// Saves an instance of a dcmtk file to 
+// a memory buffer in format of a DICOM file.
+OFCondition saveToMemoryBuffer(
+    std::shared_ptr<DcmFileFormat> dicom, // input instance of a dcmtk file
+    void* buffer,                         // buffer to save the data
+    size_t size,                          // size of the buffer in bytes
+    size_t& written                       // number of bytes written to the buffer
+    )
 {
     DcmOutputBufferStream out(buffer, size);
-
+    DcmWriteCache cache;
     dicom->transferInit();
-    OFCondition res = dicom->write(out, EXS_Unknown, EET_UndefinedLength, nullptr,
-                                   EGL_recalcGL);
+    OFCondition res = dicom->write(out, EXS_Unknown,
+        EET_UndefinedLength, &cache, EGL_recalcGL);
     dicom->transferEnd();
 
     if(res.good())
@@ -51,3 +64,4 @@ OFCondition saveToMemoryBuffer(std::shared_ptr<DcmFileFormat> dicom, void* buffe
 
     return res;
 }
+

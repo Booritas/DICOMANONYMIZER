@@ -6,13 +6,15 @@
 #include "utils.h"
 #include <dcmtk/dcmdata/dcostrmb.h>
 
-extern "C" void AddTag(bool isHeader, const char* tag, bool red);
+extern "C" void addTagJS(const char* parentHtmlTag, const char* tag, bool confidential);
+extern "C" void showErrorMessageJS(const char* errorMessage);
 
 
 // Loop over the tags contained in a DICOM dataset, convert them as
 // strings, and fill the HTML page with these strings.
-static void sendTagsToJavascript(DcmItem* item, bool isHeader)
+static void sendTagsToJavascript(DcmItem* item, const char* parentHtmlTag)
 {
+    std::cout << "sendTags: " << parentHtmlTag << std::endl;
     if (item != NULL)
     {
         for (unsigned long i = 0; i < item->card(); i++)
@@ -36,12 +38,12 @@ static void sendTagsToJavascript(DcmItem* item, bool isHeader)
                         value != NULL)
                     {
                         std::string tag = name + std::string(value);
-                        AddTag(isHeader, tag.c_str(), red);
+                        addTagJS(parentHtmlTag, tag.c_str(), red);
                     }
                     else
                     {
                         std::string tag = name + "Not a string";
-                        AddTag(isHeader, tag.c_str(), red);
+                        addTagJS(parentHtmlTag, tag.c_str(), red);
                     }
                 }
             }
@@ -49,52 +51,99 @@ static void sendTagsToJavascript(DcmItem* item, bool isHeader)
     }
 }
 
-// Shows tag values on the WEB page
-static void printTags(std::shared_ptr<DcmFileFormat> dicom, bool left)
+// Notiy user about an error.
+// The function passes the message to 
+// a javascript funtion for displayng of
+// the message on the WEB pagh
+static void showErrorMessage(
+    const char* errorMessage // error message
+    )
 {
-    sendTagsToJavascript(dicom->getMetaInfo(), left);
-    sendTagsToJavascript(dicom->getDataset(), left);
+    showErrorMessageJS(errorMessage);
 }
 
-// Performes anonimyzation of a DICOM file
-extern "C" size_t EMSCRIPTEN_KEEPALIVE anonymizeFile(
-    const void* inputData, size_t inputLength,
-    void* outputData, size_t outputLength)
+// Prints all DICOM tags of a DICOM dataset to a WEB page
+// Tag information is added one after another
+// as child html to a parent html tag specified
+// by the parentHtmlTag parameter.
+extern "C" bool EMSCRIPTEN_KEEPALIVE printTags(
+    const void* inputData,      // Memory buffer containing the DICOM dataset (read from a file for ex.)
+    size_t inputLength,         // Length of the memory buffer in bytes.
+    char* parentHtmlTag         // HTML tag name to output DICOM tag information
+    )
 {
-    // std::cout << "Copy " << inputLength << " bytest to the output buffer" << std::endl;
-    // std::memcpy(outputData, inputData, inputLength);
-    // return inputLength;
+    std::cout << "Html tag: " << parentHtmlTag << std::endl;
+    bool ret(true);
+    std::shared_ptr<DcmFileFormat> dicom;
+    OFCondition res = loadFromMemoryBuffer(inputData, inputLength, dicom);
+    if(!dicom || res.bad())
+    {
+        ret = false;
+        showErrorMessage("Cannot parse the DICOM dataset.");
+        showErrorMessage(res.text());
+    }
+    else
+    {
+        sendTagsToJavascript(dicom->getMetaInfo(), parentHtmlTag);
+        sendTagsToJavascript(dicom->getDataset(), parentHtmlTag);
+    }   
+    return ret;
+}
+
+// Performes anonimyzation of a DICOM file.
+// The function reads a DICOM dataset from a 
+// byte array, performes anomymization and
+// saves the dataset to an output buffer.
+// Format of the input and ouput buffets
+// corresponds DICOM file format.
+extern "C" size_t EMSCRIPTEN_KEEPALIVE anonymizeFile(
+    const void* inputData,  // input buffer with DICOM data
+    size_t inputLength,     // length of the input buffet
+    void* outputData,       // Output buffer for saving of anonymized data
+    size_t outputLength,    // Size of the output buffer.
+    int tracingLevel        // 0, 1, or 2: tracing level
+    )
+{
     size_t written = 0;
-    std::cout << "---------anonymizeFile Begin. Received bytes: " << inputLength << std::endl;
-    std::cout << "Output buffer size: " << outputLength << std::endl;
+    if(tracingLevel>0)
+    {
+        std::cout << "---------anonymizeFile Begin. Received bytes: " << inputLength << std::endl;
+        std::cout << "Output buffer size: " << outputLength << std::endl;
+    }
     if(inputData && inputLength)
     {
-        std::shared_ptr<DcmFileFormat> dicom(loadFromMemoryBuffer(inputData, inputLength));
-        if(dicom)
+        std::shared_ptr<DcmFileFormat> dicom;
+        OFCondition res = loadFromMemoryBuffer(inputData, inputLength, dicom);
+        if(dicom && res.good()) 
         {
-            std::cout << "DICOM file successfuly loaded" << std::endl;
-            printTags(dicom, true);
-            stripPrivateTags(dicom);
-            printTags(dicom, false);
-            OFCondition res = saveToMemoryBuffer(dicom, outputData, outputLength, written);
+            if(tracingLevel>0)
+            {
+                std::cout << "DICOM file successfuly loaded" << std::endl;
+            }
+            stripPrivateTags(dicom, tracingLevel);
+            res = saveToMemoryBuffer(dicom, outputData, outputLength, written);
             if(res.bad())
             {
                 written = 0;
-                std::cout << "Failed to save dataset" << std::endl;
-                std::cout << "Error code:" << res.code() << ". Message: " << res.text() << std::endl;
+                showErrorMessage("Failed to save DICOM data to the buffer");
+                showErrorMessage(res.text());
             }
 
         }
         else
         {
-            std::cout << "Failed to load DICOM file" << std::endl;
+            showErrorMessage("Failed to load DICOM data from the buffer");
+            showErrorMessage(res.text());
         }
     }
     else
     {
-        std::cout << "Invalid data received" << std::endl;
+        showErrorMessage("Invalid data received.");
     }
-    std::cout << "---------anonymizeFile End" << std::endl;
+    if(tracingLevel>0)
+    {
+        std::cout << "---------anonymizeFile End" << std::endl;
+    }
     return written;
 }
 #endif

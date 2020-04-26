@@ -16,8 +16,26 @@ var ENTITY_MAP = {
     });
   }
   
-
-function anonymizeFile(input, output, bufferLen)
+function printTags(input, parentHtmlTag)
+{
+    const done = Module.ccall(
+        'printTags',    // Name of the C++ function
+        'number',           // Return value (a Boolean indicating success)
+        [                   // The list of arguments
+            'array',    
+            'number',
+            'string'
+        ],
+        [                   // The value of the arguments
+            input,
+            input.byteLength,
+            parentHtmlTag
+        ]
+    );
+    return done!=0;
+}
+  
+function anonymizeFile(input, output, bufferLen, tracingLevel)
 {
     const done = Module.ccall(
         'anonymizeFile',    // Name of the C++ function
@@ -26,17 +44,20 @@ function anonymizeFile(input, output, bufferLen)
             'array',    
             'number',
             'number',
+            'number',
             'number'
         ],
         [                   // The value of the arguments
             input,
             input.byteLength,
             output,
-            bufferLen 
+            bufferLen,
+            tracingLevel
         ]
     );
     return done;
 }
+
 function updateProtocol(text)
 {
    document.getElementById("protocol").innerHTML += text + "<br/>";
@@ -78,11 +99,11 @@ document.getElementById('upload').addEventListener('submit', function(e)
             var dicom = this.result;
             console.log("Received " + dicom.byteLength + " bytes.")
             var input = new Uint8Array(dicom);
+            printTags(input, "before");
             const bytesPerElement = Module.HEAPU8.BYTES_PER_ELEMENT;
             const newBufferLen = dicom.byteLength*2;
             var outputBuffer = Module._malloc(newBufferLen*bytesPerElement);
-            //Module.HEAPU8.set(output, outputBuffer/bytesPerElement);
-            var newLen = anonymizeFile(input, outputBuffer, newBufferLen);
+            var newLen = anonymizeFile(input, outputBuffer, newBufferLen, 2);
             if (newLen<=0)
             {
                 alert('Sorry, unable to process the DICOM file');
@@ -90,6 +111,7 @@ document.getElementById('upload').addEventListener('submit', function(e)
             else
             {
                 var output = new Uint8Array(Module.HEAPU8.buffer, outputBuffer, newLen);
+                printTags(output, "after");
                 console.log("Sending " + newLen + " bytes");
                 sendData(output);
             }
