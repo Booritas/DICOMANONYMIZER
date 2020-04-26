@@ -41,6 +41,67 @@ cmake --build .
 - CMakeLists.txt: cmake file for building of the WebAssembly or c++ executable.
 - build.sh: script for building of the WebAssembly.
 - main.cpp: main function for c++ executable (for testing reason).
+## C++ API reference
+The WebAssembly exposes the following functons.
+### anonymizeFile
+The functiion reads DICOM data from an input byte array, removes confidential tags and saves the data to output byte array. 
+
+Parameters:
+- input (const void*): input byte array with content of a DICOM file.
+- inputLength (size_t): size of the input data in bytes.
+- outputData (void*): a buffer for the output data after anomyzation.
+- outputLength (size_t): length of the buffer for output data.
+- tracingLevel (int): integet 0,1,2 that defines a tracing level (output to console);
+
+File wrap.js contains a wrapper function (anonymizeFile) for calling of the function from javascript.
+### printTags
+The function reads DICOM data from an input byte array and prints DICOM tags it to the WEB page. Location where the information is printed defined by a HTIML tag - container on the WEB page.
+
+Parameters:
+- input (const void*): input byte array with content of a DICOM file.
+- inputLength (size_t): size of the input data in bytes.
+- parentHtmlTag (const char*): id of the parent HTML element which should show the information.
+
+File wrap.js contains a wrapper function (printTags) for calling of the function from javascript.
+
+## Javascript API
+### anonymizeFile
+A javascript wrapper function for calling of WebAssembly function anonymizeFile.
+
+Parameters:
+- input: Uint8Array with content of a DICOM file.
+- output: a buffer allocated in the WebAssembly module heap for anonymized data.
+- bufferLen: size of the output buffer in bytes.
+- tracingLevel:  integet 0,1,2 that defines a tracing level (output to console);
+
+### printTags
+A javascript wrapper function for calling of WebAssembly function printTags.
+
+Parameters:
+- input (Uint8Array): an array with content of a DICOM file.
+- parentHtmlTag (string): id of HTML element where the information will be printed.
+
+### sendData
+The functon sends content of DICOM file to a orthanc server (endpoint and credentials currently hardcoded).
+
+Parameters:
+- dicomData (UInt8Array): array with content of a DICOM file.
+
+## Javascript auxillary functions use in the WebAssembly.
+The following functions facilitate displaying of information on th WEB page and are called form the WebAssembly.
+### addTagsJS
+Auxillary function that prints DICOM tag information to the WEB page.
+
+Parameters:
+- parentHtmlTagNameUTF8 (utf8 string): id of an HTML element used to display the information.
+- s (utf8 string): DICOM tag information
+- confidential (boolean): true if the tag is confidential.
+### showErrorMessageJS
+Auxillary function to display error messages on the WEB page.
+
+Parameters:
+- errorMessageUTF8 (utf8 string): error message.
+
 ## Used software
 - DCMTK library
 - Repository Parsing DICOM using WebAssembly (https://github.com/jodogne/wasm-dicom-parser)
