@@ -37,6 +37,7 @@ cmake --build .
 - Folder "build": location of temporary build files.
 - Folder "tests": c++ unit tests.
 - Folder "test_images": location of test images for c++ unit tests.
+- Folder "images": location of pictures for the documentation.
 - anonymize.cpp: c++ code for functions exported from the WebAssembly (exposed to the WEB page).
 - stripDataset.h, stripDataset.cpp: functions for the anonymization of a dcmtk dataset.
 - utils.h, utils.cpp: functions for saving/loading of dcmtk instances to/from buffer.
