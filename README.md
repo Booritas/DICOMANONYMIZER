@@ -1,4 +1,6 @@
 ## DICOMANONYMIZER
+[](images/web.png)
+
 WebAssembly based DICOM file anonymization. The software strips confidential tags from a DICOM file.
 ## Prerequisites
 - Emscripten SDK
@@ -13,7 +15,6 @@ cd DICOMANONYMIZER
 - Distribution files are copied in dist subfolder of the repository root directory.
 ## WebAssembly distribution files.
 - index.html: HTML file for the WEB page.
-- library.js: Javascript functions that will be called from the WebAssembly.
 - style.cs: style sheet for the WEB page.
 - wrap.js: Javascript that contains function called from the HTML code, include javascript wrappers for the WebAssembly.
 - DICOMAnonymizer.js: Plumbing functions for the WebAssembly.
@@ -52,6 +53,9 @@ Parameters:
 - outputData (void*): a buffer for the output data after anomyzation.
 - outputLength (size_t): length of the buffer for output data.
 - tracingLevel (int): integet 0,1,2 that defines a tracing level (output to console);
+- - 0: No information.
+- - 1: Function calls only.
+- - 2: Detailed information.  
 
 File wrap.js contains a wrapper function (anonymizeFile) for calling of the function from javascript.
 ### printTags
@@ -87,8 +91,8 @@ The functon sends content of DICOM file to a orthanc server (endpoint and creden
 Parameters:
 - dicomData (UInt8Array): array with content of a DICOM file.
 
-## Javascript auxillary functions use in the WebAssembly.
-The following functions facilitate displaying of information on th WEB page and are called form the WebAssembly.
+## Javascript auxillary functions.
+The following functions facilitate displaying of information on th WEB page and are called form the WebAssembly. The functions are located in the file library.js and compiled in the WebAssembly module.
 ### addTagsJS
 Auxillary function that prints DICOM tag information to the WEB page.
 
@@ -107,3 +111,4 @@ Parameters:
 - Repository Parsing DICOM using WebAssembly (https://github.com/jodogne/wasm-dicom-parser)
 - Emscripten framework
 - cmake
+

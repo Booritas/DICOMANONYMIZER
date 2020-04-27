@@ -229,7 +229,6 @@ if (WA_BUILD)
     ${CMAKE_SOURCE_DIR}/index.html
     ${CMAKE_SOURCE_DIR}/style.css
     ${CMAKE_SOURCE_DIR}/wrap.js
-    ${CMAKE_SOURCE_DIR}/library.js
     ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.wasm
     ${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}.js
     DESTINATION ${CMAKE_SOURCE_DIR}/dist
