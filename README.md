@@ -1,5 +1,5 @@
 ## DICOMANONYMIZER
-[](images/web.png)
+![](images/web.png)
 
 WebAssembly based DICOM file anonymization. The software strips confidential tags from a DICOM file.
 ## Prerequisites
