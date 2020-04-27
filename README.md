@@ -35,6 +35,8 @@ cmake --build .
 - Folder "config_cpp": files with the configuration of the dcmtk library for Linux c++ compilation.
 - Folder "dist": location of the WebAssembly distribution files.
 - Folder "build": location of temporary build files.
+- Folder "tests": c++ unit tests.
+- Folder "test_images": location of test images for c++ unit tests.
 - anonymize.cpp: c++ code for functions exported from the WebAssembly (exposed to the WEB page).
 - stripDataset.h, stripDataset.cpp: functions for the anonymization of a dcmtk dataset.
 - utils.h, utils.cpp: functions for saving/loading of dcmtk instances to/from buffer.

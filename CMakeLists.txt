@@ -235,7 +235,13 @@ if (WA_BUILD)
     )
 else()
   # c++ native target build
+  set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/lib )
+  set( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/lib )
+  set( CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${OUTPUTCONFIG}/bin )
+
+  add_subdirectory(tests)
   add_library(cpplib ${SOURCE})
   add_executable(${PROJECT_NAME} main.cpp)
   target_link_libraries(${PROJECT_NAME} cpplib dcmtk)
 endif()
+
